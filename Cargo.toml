@@ -1,6 +1,31 @@
-[package]
+﻿[package]
 name = "agentropic-messaging"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["Agentropic <agentropic@gmail.com>"]
+license = "MIT OR Apache-2.0"
+description = "Communication protocols, message routing, and ACL for multi-agent systems"
+repository = "https://github.com/agentropic/agentropic-messaging"
+documentation = "https://docs.rs/agentropic-messaging"
+keywords = ["agents", "messaging", "acl", "communication"]
+categories = ["concurrency", "network-programming"]
+readme = "README.md"
 
 [dependencies]
+# Works locally with path, falls back to crates.io if path doesn't exist
+agentropic-core = { version = "0.1.0", path = "../agentropic-core" }
+
+async-trait = "0.1"
+tokio = { version = "1.0", features = ["full", "sync"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+crossbeam = "0.8"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[features]
+default = []
