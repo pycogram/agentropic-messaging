@@ -14,9 +14,6 @@ readme = "README.md"
 [dependencies]
 agentropic-core = { git = "https://github.com/pycogram/agentropic-core", branch = "main" }
 
-[patch."https://github.com/pycogram/agentropic-core"]
-agentropic-core = { path = "../agentropic-core" }
-
 async-trait = "0.1"
 tokio = { version = "1.0", features = ["full", "sync"] }
 serde = { version = "1.0", features = ["derive"] }
