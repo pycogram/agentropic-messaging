@@ -3,6 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/agentropic-messaging.svg)](https://crates.io/crates/agentropic-messaging)
 [![Documentation](https://docs.rs/agentropic-messaging/badge.svg)](https://docs.rs/agentropic-messaging)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
+![CI](https://github.com/pycogram/agentropic-messaging/workflows/CI/badge.svg)
 
 **Communication protocols, message routing, and Agent Communication Language (ACL) for multi-agent systems.**
 
