@@ -13,7 +13,7 @@ pub struct MessageBuilder {
 }
 
 impl MessageBuilder {
-    /// Create new builder
+    /// Create a new builder
     pub fn new() -> Self {
         Self {
             sender: None,
