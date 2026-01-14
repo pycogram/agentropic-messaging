@@ -1,18 +1,21 @@
-﻿//! Communication protocols, message routing, and ACL for multi-agent systems.
+//! Communication protocols, message routing, and ACL for multi-agent systems.
 
-pub mod message;
+//#![warn(missing_docs)]
+#![allow(missing_docs)]
+
 pub mod builder;
-pub mod performative;
-pub mod router;
-pub mod mailbox;
 pub mod error;
-pub mod protocols;
+pub mod mailbox;
+pub mod message;
+pub mod performative;
 pub mod prelude;
+pub mod protocols;
+pub mod router;
 
 // Re-exports
-pub use message::{Message, MessageId};
 pub use builder::MessageBuilder;
+pub use error::MessagingError;
+pub use mailbox::Mailbox;
+pub use message::{Message, MessageId};
 pub use performative::Performative;
 pub use router::Router;
-pub use mailbox::Mailbox;
-pub use error::MessagingError;
