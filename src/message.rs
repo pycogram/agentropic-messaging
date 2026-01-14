@@ -1,8 +1,8 @@
-﻿use agentropic_core::AgentId;
+use crate::Performative;
+use agentropic_core::AgentId;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 use uuid::Uuid;
-use crate::Performative;
 
 /// Unique message identifier
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
