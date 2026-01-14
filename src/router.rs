@@ -50,7 +50,7 @@ impl Router {
 
         mailbox
             .send(message)
-            .map_err(|e| MessagingError::SendFailed(e))
+            .map_err(MessagingError::SendFailed) 
     }
 
     /// Create a new mailbox
