@@ -48,9 +48,7 @@ impl Router {
             .get(&message.receiver())
             .ok_or(MessagingError::AgentNotFound)?;
 
-        mailbox
-            .send(message)
-            .map_err(MessagingError::SendFailed) 
+        mailbox.send(message).map_err(MessagingError::SendFailed)
     }
 
     /// Create a new mailboxx
