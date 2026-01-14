@@ -1,5 +1,5 @@
-﻿use agentropic_core::AgentId;
 use crate::{Mailbox, Message, MessagingError};
+use agentropic_core::AgentId;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -19,7 +19,9 @@ impl Router {
 
     /// Register an agent with a mailbox
     pub fn register(&self, agent_id: AgentId, mailbox: Mailbox) -> Result<(), MessagingError> {
-        let mut mailboxes = self.mailboxes.write()
+        let mut mailboxes = self
+            .mailboxes
+            .write()
             .map_err(|_| MessagingError::LockError)?;
         mailboxes.insert(agent_id, mailbox);
         Ok(())
@@ -27,7 +29,9 @@ impl Router {
 
     /// Unregister an agent
     pub fn unregister(&self, agent_id: &AgentId) -> Result<(), MessagingError> {
-        let mut mailboxes = self.mailboxes.write()
+        let mut mailboxes = self
+            .mailboxes
+            .write()
             .map_err(|_| MessagingError::LockError)?;
         mailboxes.remove(agent_id);
         Ok(())
@@ -35,13 +39,17 @@ impl Router {
 
     /// Send a message
     pub fn send(&self, message: Message) -> Result<(), MessagingError> {
-        let mailboxes = self.mailboxes.read()
+        let mailboxes = self
+            .mailboxes
+            .read()
             .map_err(|_| MessagingError::LockError)?;
-        
-        let mailbox = mailboxes.get(&message.receiver())
+
+        let mailbox = mailboxes
+            .get(&message.receiver())
             .ok_or(MessagingError::AgentNotFound)?;
-        
-        mailbox.send(message)
+
+        mailbox
+            .send(message)
             .map_err(|e| MessagingError::SendFailed(e))
     }
 
