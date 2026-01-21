@@ -1,195 +1,281 @@
-# agentropic-messaging
+﻿# agentropic-messaging
 
 [![Crates.io](https://img.shields.io/crates/v/agentropic-messaging.svg)](https://crates.io/crates/agentropic-messaging)
 [![Documentation](https://docs.rs/agentropic-messaging/badge.svg)](https://docs.rs/agentropic-messaging)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
-![CI](https://github.com/pycogram/agentropic-messaging/workflows/CI/badge.svg)
 
 **Communication protocols, message routing, and Agent Communication Language (ACL) for multi-agent systems.**
 
-`agentropic-messaging` provides the infrastructure for agents to communicate, coordinate, and collaborate. It implements message passing semantics, routing mechanisms, and standardized communication protocols that enable sophisticated multi-agent interactions.
+`agentropic-messaging` provides the infrastructure for agents to communicate, coordinate, and collaborate. It implements message passing semantics, routing mechanisms, and standardized communication protocols based on FIPA ACL standards.
 
 ---
 
-## 🎯 Purpose
+## Purpose
 
 This crate provides:
 
-- **Message Protocols**: Structured message formats and semantics
-- **Agent Communication Language (ACL)**: Standardized speech acts and performatives
+- **Message Protocols**: Structured message formats with unique IDs
+- **Agent Communication Language (ACL)**: FIPA-compliant speech acts (performatives)
 - **Message Routing**: Intelligent delivery of messages between agents
-- **Communication Patterns**: Common interaction protocols (request-reply, broadcast, etc.)
+- **Mailbox System**: Per-agent message queues
+- **Communication Patterns**: Request-reply and other interaction protocols
 
 ---
 
-## 🧩 Core Concepts
+## Implementation Status
+
+ **Fully Implemented (v0.1.0)**:
+- **Message** - Core message structure with IDs and performatives
+- **Performative** - 12 FIPA speech acts (Inform, Request, Query, etc.)
+- **Router** - Message routing with registration and delivery
+- **Mailbox** - Agent message queues with async receive
+- **Protocols** - Request-reply pattern implementation
+
+All components have:
+-  Working implementations
+-  Comprehensive tests
+-  Runnable examples
+-  Full documentation
+
+**Future (v0.2.0+)**:
+- Builder pattern API for ergonomic message construction
+- Topic-based pub/sub routing
+- Advanced protocols (ContractNet, Auction)
+- Content-based routing and filtering
+
+---
+
+## Core Concepts
 
 ### Agent Messages
 
 Messages are the fundamental unit of agent communication:
 ```rust
-use agentropic_messaging::{Message, MessageBuilder, Performative};
-use agentropic_core::AgentId;
+use agentropic_messaging::prelude::*;
 
-let message = MessageBuilder::new()
-    .sender(sender_id)
-    .receiver(receiver_id)
-    .performative(Performative::Request)
-    .content("Get market data")
-    .build();
+// Create a message
+let message = Message::new(
+    sender_id,
+    receiver_id,
+    Performative::Request,
+    "Get market data"
+);
+
+Each message has:
+- Unique MessageId (UUID-based)
+- Sender AgentId
+- Receiver AgentId  
+- Performative (speech act type)
+- Content (string payload)
 ```
 
 ### Performatives (Speech Acts)
 
-Based on speech act theory, performatives define the intent of a message:
-
-- **Inform** - Share information
-- **Request** - Ask for an action or information
-- **Query** - Ask a question
-- **Propose** - Suggest a course of action
-- **Accept** - Agree to a proposal
-- **Reject** - Decline a proposal
-- **Confirm** - Verify information
-- **Disconfirm** - Contradict information
-- **Subscribe** - Request ongoing updates
-- **CFP (Call for Proposals)** - Solicit offers
-- **Refuse** - Decline to perform an action
+Based on FIPA ACL and speech act theory:
 ```rust
 use agentropic_messaging::Performative;
 
-// Request information
-let query = Message::new(
-    sender,
-    receiver,
-    Performative::Query,
-    "What is the current temperature?"
-);
-
-// Inform with data
-let response = Message::new(
-    receiver,
-    sender,
-    Performative::Inform,
-    "The current temperature is 22°C"
-);
+// Available performatives:
+Performative::Inform        // Share information
+Performative::Request       // Ask for action
+Performative::Query         // Ask a question
+Performative::Propose       // Suggest action
+Performative::Accept        // Agree to proposal
+Performative::Reject        // Decline proposal
+Performative::Confirm       // Verify information
+Performative::Disconfirm    // Contradict information
+Performative::Subscribe     // Request updates
+Performative::CFP           // Call for proposals
+Performative::Refuse        // Decline to perform
+Performative::Agree         // Commit to action
 ```
 
 ### Message Routing
 
-The router delivers messages to appropriate recipients:
+The router delivers messages between agents:
 ```rust
-use agentropic_messaging::{Router, RoutingStrategy};
+use agentropic_messaging::prelude::*;
 
+// Create router
 let mut router = Router::new();
 
-// Register an agent
-router.register_agent(agent_id, mailbox);
+// Register agents
+router.register(agent_a);
+router.register(agent_b);
 
-// Send a message
-router.send(message).await?;
+// Route a message
+router.route(message).await?;
 
-// Broadcast to multiple agents
-router.broadcast(message, agent_ids).await?;
+// Check if routed
+if router.has_routed(&message_id) {
+    println!("Message delivered");
+}
 ```
 
-### Communication Protocols
+### Mailbox System
 
-Higher-level interaction patterns:
+Each agent has a mailbox for receiving messages:
 ```rust
-use agentropic_messaging::protocols::{RequestReply, ContractNet};
+use agentropic_messaging::prelude::*;
 
-// Request-Reply pattern
-let reply = RequestReply::execute(
-    sender,
-    receiver,
-    "Perform calculation",
-    timeout
-).await?;
+// Create mailbox
+let mut mailbox = Mailbox::new();
 
-// Contract Net Protocol (CNP)
-let bids = ContractNet::call_for_proposals(
-    manager,
-    participants,
-    task_description
-).await?;
+// Send to mailbox
+mailbox.send(message).await?;
+
+// Receive from mailbox
+if let Some(msg) = mailbox.receive().await {
+    println!("Received: {}", msg.content());
+}
+
+// Check mailbox size
+println!("Messages: {}", mailbox.size());
+```
+
+### Request-Reply Protocol
+
+Synchronous request-response pattern:
+```rust
+use agentropic_messaging::protocols::prelude::*;
+
+// Create request-reply protocol
+let protocol = RequestReply::new(requester_id, responder_id);
+
+// Send request
+let request = Message::new(
+    requester_id,
+    responder_id,
+    Performative::Request,
+    "Get status"
+);
+
+protocol.send_request(request).await?;
+
+// Receive reply
+if let Some(reply) = protocol.receive_reply().await {
+    println!("Reply: {}", reply.content());
+}
 ```
 
 ---
 
-## 📦 What's Included
+## What's Included
 
 ### Core Types
 
-- `Message` - The fundamental message structure
-- `MessageBuilder` - Fluent API for message construction
-- `Performative` - Speech act types (Inform, Request, Query, etc.)
-- `MessageContent` - Typed message payloads
+- `Message` - Message structure with ID, sender, receiver, performative, content
+- `MessageId` - Unique message identifier (UUID-based)
+- `Performative` - 12 FIPA-compliant speech act types
+- `Router` - Message routing engine with registration
+- `Mailbox` - Agent message queue with async operations
 
 ### Routing
 
-- `Router` - Central message routing engine
-- `Mailbox` - Agent message queue
-- `RoutingStrategy` - Direct, broadcast, multicast routing
-- `MessageFilter` - Content-based routing and filtering
+- `Router` - Central message routing
+  - `register()` - Register agents
+  - `route()` - Deliver messages
+  - `has_routed()` - Check delivery status
+- `Mailbox` - Per-agent message queue
+  - `send()` - Add message
+  - `receive()` - Get next message
+  - `is_empty()` - Check if empty
 
 ### Protocols
 
-- `RequestReply` - Synchronous request-response
-- `Subscribe` - Pub/sub patterns
-- `ContractNet` - Task allocation through bidding
-- `AuctionProtocol` - Market-based coordination
+- `RequestReply` - Request-response pattern
+  - `send_request()` - Send request message
+  - `receive_reply()` - Wait for reply
+  - Support for timeouts and error handling
 
-### ACL Support
+### Performatives (FIPA ACL)
 
-- FIPA-inspired message structure
-- Conversation tracking with `conversation_id`
-- Reply management with `in_reply_to`
-- Protocol specification fields
+Based on Foundation for Intelligent Physical Agents standards:
+- **Assertives**: Inform, Confirm, Disconfirm
+- **Directives**: Request, Query, Subscribe
+- **Commissives**: Propose, Accept, Agree
+- **Declaratives**: CFP (Call for Proposals)
+- **Expressives**: Refuse, Reject
 
 ---
 
-## 🚀 Usage
+## Usage
 
 Add to your `Cargo.toml`:
 ```toml
 [dependencies]
 agentropic-messaging = "0.1.0"
 agentropic-core = "0.1.0"
+tokio = { version = "1.0", features = ["full"] }
 ```
 
 ### Basic Message Passing
 ```rust
-use agentropic_messaging::{Message, MessageBuilder, Performative, Router};
-use agentropic_core::AgentId;
+use agentropic_messaging::prelude::*;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create router
-    let mut router = Router::new();
-    
+async fn main() -> Result<(), MessagingError> {
     // Create agents
     let agent_a = AgentId::new();
     let agent_b = AgentId::new();
     
-    // Register agents with mailboxes
-    let mailbox_a = router.create_mailbox();
-    let mailbox_b = router.create_mailbox();
-    router.register_agent(agent_a, mailbox_a.clone())?;
-    router.register_agent(agent_b, mailbox_b.clone())?;
+    // Create mailboxes
+    let mut mailbox_a = Mailbox::new();
+    let mut mailbox_b = Mailbox::new();
     
     // Send a message
-    let message = MessageBuilder::new()
-        .sender(agent_a)
-        .receiver(agent_b)
-        .performative(Performative::Request)
-        .content("Hello, Agent B!")
-        .build();
+    let message = Message::new(
+        agent_a,
+        agent_b,
+        Performative::Inform,
+        "Hello, Agent B!"
+    );
     
-    router.send(message).await?;
+    mailbox_b.send(message).await?;
     
     // Receive message
     if let Some(msg) = mailbox_b.receive().await {
-        println!("Received: {:?}", msg.content());
+        println!("Agent B received: {}", msg.content());
+        println!("From: {}", msg.sender());
+        println!("Performative: {:?}", msg.performative());
+    }
+    
+    Ok(())
+}
+```
+
+### Using the Router
+```rust
+use agentropic_messaging::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<(), MessagingError> {
+    // Create router
+    let mut router = Router::new();
+    
+    // Create and register agents
+    let agent_a = AgentId::new();
+    let agent_b = AgentId::new();
+    
+    router.register(agent_a);
+    router.register(agent_b);
+    
+    println!("Registered agents: {}", router.agent_count());
+    
+    // Create and route message
+    let message = Message::new(
+        agent_a,
+        agent_b,
+        Performative::Request,
+        "Please send status"
+    );
+    
+    let message_id = *message.id();
+    router.route(message).await?;
+    
+    // Verify delivery
+    if router.has_routed(&message_id) {
+        println!("Message successfully routed!");
     }
     
     Ok(())
@@ -198,134 +284,212 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Request-Reply Pattern
 ```rust
-use agentropic_messaging::{MessageBuilder, Performative};
-use std::time::Duration;
+use agentropic_messaging::prelude::*;
+use agentropic_messaging::protocols::prelude::*;
 
-async fn request_reply_example(
-    router: &Router,
-    requester: AgentId,
-    responder: AgentId
-) -> Result<String, Box<dyn std::error::Error>> {
-    // Send request
-    let request = MessageBuilder::new()
-        .sender(requester)
-        .receiver(responder)
-        .performative(Performative::Request)
-        .content("Get status")
-        .conversation_id("conv-123")
-        .build();
+#[tokio::main]
+async fn main() -> Result<(), MessagingError> {
+    let requester = AgentId::new();
+    let responder = AgentId::new();
     
-    router.send(request).await?;
+    // Create request-reply protocol
+    let mut protocol = RequestReply::new(requester, responder);
     
-    // Wait for reply
-    let reply = router.wait_for_reply(
+    // Requester sends request
+    let request = Message::new(
         requester,
-        "conv-123",
-        Duration::from_secs(5)
-    ).await?;
+        responder,
+        Performative::Request,
+        "What is the temperature?"
+    );
     
-    Ok(reply.content().to_string())
+    protocol.send_request(request).await?;
+    
+    // Responder receives and replies
+    if let Some(req) = protocol.receive_request().await {
+        println!("Received request: {}", req.content());
+        
+        let reply = Message::new(
+            responder,
+            requester,
+            Performative::Inform,
+            "Temperature is 22°C"
+        );
+        
+        protocol.send_reply(reply).await?;
+    }
+    
+    // Requester receives reply
+    if let Some(reply) = protocol.receive_reply().await {
+        println!("Received reply: {}", reply.content());
+    }
+    
+    Ok(())
 }
 ```
 
-### Pub/Sub Pattern
+### Different Performatives
 ```rust
-use agentropic_messaging::{Topic, Subscription};
+use agentropic_messaging::prelude::*;
 
-// Create a topic
-let topic = Topic::new("market.prices");
-
-// Publisher
-async fn publish(router: &Router, publisher_id: AgentId, data: &str) {
-    let message = MessageBuilder::new()
-        .sender(publisher_id)
-        .performative(Performative::Inform)
-        .topic("market.prices")
-        .content(data)
-        .build();
+fn main() {
+    let sender = AgentId::new();
+    let receiver = AgentId::new();
     
-    router.publish(message).await?;
-}
-
-// Subscriber
-async fn subscribe(router: &Router, subscriber_id: AgentId) {
-    router.subscribe(subscriber_id, "market.prices").await?;
+    // Inform: Share information
+    let inform = Message::new(
+        sender,
+        receiver,
+        Performative::Inform,
+        "The market is open"
+    );
     
-    while let Some(msg) = router.receive(subscriber_id).await {
-        println!("Received update: {}", msg.content());
-    }
+    // Request: Ask for action
+    let request = Message::new(
+        sender,
+        receiver,
+        Performative::Request,
+        "Please buy 100 shares"
+    );
+    
+    // Query: Ask a question
+    let query = Message::new(
+        sender,
+        receiver,
+        Performative::Query,
+        "What is the current price?"
+    );
+    
+    // Propose: Suggest action
+    let propose = Message::new(
+        sender,
+        receiver,
+        Performative::Propose,
+        "Let's form a coalition"
+    );
+    
+    // Accept: Agree to proposal
+    let accept = Message::new(
+        sender,
+        receiver,
+        Performative::Accept,
+        "I accept your proposal"
+    );
+    
+    // CFP: Call for proposals
+    let cfp = Message::new(
+        sender,
+        receiver,
+        Performative::CFP,
+        "Seeking bids for task execution"
+    );
 }
 ```
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ### Message Structure
 ```rust
 pub struct Message {
-    pub id: MessageId,              // Unique message identifier
-    pub sender: AgentId,             // Sender agent
-    pub receiver: AgentId,           // Receiver agent (or topic)
-    pub performative: Performative,  // Speech act type
-    pub content: MessageContent,     // Message payload
-    pub conversation_id: Option<String>, // Conversation tracking
-    pub in_reply_to: Option<MessageId>,  // Reply reference
-    pub protocol: Option<String>,    // Protocol identifier
-    pub timestamp: SystemTime,       // Message creation time
+    id: MessageId,              // Unique UUID-based identifier
+    sender: AgentId,            // Sending agent
+    receiver: AgentId,          // Receiving agent
+    performative: Performative, // Speech act type
+    content: String,            // Message payload
 }
+```
+
+### Message Flow
+```
+┌──────────┐                ┌──────────┐
+│ Agent A  │                │ Agent B  │
+│          │                │          │
+│ Mailbox  │                │ Mailbox  │
+└────┬─────┘                └────┬─────┘
+     │                           │
+     │    1. Create Message      │
+     ├──────────────────────────►│
+     │                           │
+     │    2. Route via Router    │
+     │         (optional)        │
+     │                           │
+     │    3. Deliver to Mailbox  │
+     ├──────────────────────────►│
+     │                           │
+     │    4. Receive & Process   │
+     │                           │
+     │◄──────────────────────────┤
+     │    5. Send Reply          │
+     │                           │
 ```
 
 ### Routing Strategies
 
-- **Direct**: One-to-one message delivery
-- **Broadcast**: One-to-many to all agents
-- **Multicast**: One-to-many to specific agents
-- **Topic-based**: Pub/sub with topic routing
+**Current (v0.1.0)**:
+- **Direct**: Agent-to-agent message delivery
+- **Registration**: Agents register with router
+- **Delivery Tracking**: Track routed messages
+
+**Future (v0.2.0+)**:
+- **Broadcast**: One-to-many delivery
+- **Topic-based**: Pub/sub with topics
 - **Content-based**: Route by message content
-
-### Delivery Guarantees
-
-- **At-most-once**: Fire and forget
-- **At-least-once**: Retry until acknowledged
-- **Exactly-once**: Deduplication and acknowledgment
+- **Multicast**: Deliver to specific groups
 
 ---
 
-## 🔗 Related Crates
+## Examples
 
-- **[agentropic-core](../agentropic-core)** - Agent primitives and traits
-- **[agentropic-cognition](../agentropic-cognition)** - Reasoning and planning
-- **[agentropic-patterns](../agentropic-patterns)** - Multi-agent system patterns
+See the [examples](examples/) directory for complete, runnable examples:
+
+- `simple_messaging.rs` - Basic message passing
+- `request_reply.rs` - Request-reply protocol
+
+Run examples:
+```bash
+cargo run --example simple_messaging
+cargo run --example request_reply
+```
+
+---
+
+## Related Crates
+
+- **[agentropic-core](../agentropic-core)** - Agent primitives and AgentId
+- **[agentropic-cognition](../agentropic-cognition)** - BDI reasoning and planning
+- **[agentropic-patterns](../agentropic-patterns)** - Multi-agent coordination patterns
 - **[agentropic-runtime](../agentropic-runtime)** - Agent execution engine
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 Full API documentation is available on [docs.rs](https://docs.rs/agentropic-messaging).
 
-For guides and tutorials, see [agentropic-docs](https://github.com/agentropic/agentropic-docs).
+For guides and tutorials, see the [Agentropic documentation](https://github.com/agentropic/agentropic-docs).
 
 ---
 
 ## 🎓 References
 
-This crate is inspired by:
+This crate is inspired by established standards and research:
 
-- **FIPA ACL** - Foundation for Intelligent Physical Agents Agent Communication Language
-- **Speech Act Theory** - Philosophical foundation for performatives
-- **Actor Model** - Message-passing concurrency
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please see the [contributing guidelines](../../CONTRIBUTING.md).
+- **FIPA ACL** (2002) - Foundation for Intelligent Physical Agents Agent Communication Language
+- **Speech Act Theory** - Austin (1962) and Searle (1969) - Philosophical foundation for performatives
+- **Actor Model** - Hewitt (1973) - Message-passing concurrency model
+- **KQML** - Knowledge Query and Manipulation Language - Early agent communication standard
 
 ---
 
-## 📜 License
+## Contributing
+
+Contributions are welcome! Please see the [contributing guidelines](CONTRIBUTING.md).
+
+---
+
+## License
 
 Licensed under either of:
 
@@ -336,9 +500,15 @@ at your option.
 
 ---
 
-## 🌟 Status
+## Status
 
-**Active Development** - This crate is under active development. APIs may change before 1.0 release.
+**Active Development** - v0.1.0 released with core message passing, routing, and request-reply protocol.
+
+**Roadmap**:
+- v0.2.0: Builder pattern API, topic-based routing, pub/sub
+- v0.3.0: Advanced protocols (ContractNet, Auction)
+- v0.4.0: Content-based routing, delivery guarantees
+- v1.0.0: Stable API with comprehensive protocol library
 
 ---
 
