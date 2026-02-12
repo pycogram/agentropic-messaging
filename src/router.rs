@@ -1,59 +1,66 @@
-use crate::{Mailbox, Message, MessagingError};
+use crate::{Message, MessagingError};
 use agentropic_core::AgentId;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use tokio::sync::mpsc;
 
 /// Message router
 #[derive(Debug, Clone)]
 pub struct Router {
-    mailboxes: Arc<RwLock<HashMap<AgentId, Mailbox>>>,
+    senders: Arc<RwLock<HashMap<AgentId, mpsc::UnboundedSender<Message>>>>,
 }
 
 impl Router {
     /// Create new router
     pub fn new() -> Self {
         Self {
-            mailboxes: Arc::new(RwLock::new(HashMap::new())),
+            senders: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
-    /// Register an agent with a mailbox
-    pub fn register(&self, agent_id: AgentId, mailbox: Mailbox) -> Result<(), MessagingError> {
-        let mut mailboxes = self
-            .mailboxes
+    /// Register an agent and return its mailbox receiver
+    pub fn register(&self, agent_id: AgentId) -> Result<mpsc::UnboundedReceiver<Message>, MessagingError> {
+        let (sender, receiver) = mpsc::unbounded_channel();
+        let mut senders = self
+            .senders
             .write()
             .map_err(|_| MessagingError::LockError)?;
-        mailboxes.insert(agent_id, mailbox);
-        Ok(())
+        senders.insert(agent_id, sender);
+        Ok(receiver)
     }
 
     /// Unregister an agent
     pub fn unregister(&self, agent_id: &AgentId) -> Result<(), MessagingError> {
-        let mut mailboxes = self
-            .mailboxes
+        let mut senders = self
+            .senders
             .write()
             .map_err(|_| MessagingError::LockError)?;
-        mailboxes.remove(agent_id);
+        senders.remove(agent_id);
         Ok(())
     }
 
-    /// Send a message
+    /// Send a message to the receiver's mailbox
     pub fn send(&self, message: Message) -> Result<(), MessagingError> {
-        let mailboxes = self
-            .mailboxes
+        let senders = self
+            .senders
             .read()
             .map_err(|_| MessagingError::LockError)?;
 
-        let mailbox = mailboxes
+        let sender = senders
             .get(&message.receiver())
             .ok_or(MessagingError::AgentNotFound)?;
 
-        mailbox.send(message).map_err(MessagingError::SendFailed)
+        sender
+            .send(message)
+            .map_err(|e| MessagingError::SendFailed(e.to_string()))
     }
 
-    /// Create a new mailbox
-    pub fn create_mailbox(&self) -> Mailbox {
-        Mailbox::new()
+    /// Check if an agent is registered
+    pub fn is_registered(&self, agent_id: &AgentId) -> bool {
+        self.senders
+            .read()
+            .map(|s| s.contains_key(agent_id))
+            .unwrap_or(false)
     }
 }
 

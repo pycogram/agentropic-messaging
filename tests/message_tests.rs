@@ -23,7 +23,8 @@ fn message_builder() {
         .receiver(receiver)
         .performative(Performative::Request)
         .content("Hello")
-        .build();
+        .build()
+        .unwrap();
 
     assert_eq!(msg.sender(), sender);
     assert_eq!(msg.content(), "Hello");

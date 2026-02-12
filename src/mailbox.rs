@@ -1,33 +1,33 @@
 ﻿use crate::Message;
-use crossbeam::channel::{unbounded, Receiver, Sender};
+use tokio::sync::mpsc;
 
 /// Agent mailbox for receiving messages
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Mailbox {
-    receiver: Receiver<Message>,
-    sender: Sender<Message>,
+    receiver: mpsc::UnboundedReceiver<Message>,
+    sender: mpsc::UnboundedSender<Message>,
 }
 
 impl Mailbox {
     /// Create a new mailbox
     pub fn new() -> Self {
-        let (sender, receiver) = unbounded();
+        let (sender, receiver) = mpsc::unbounded_channel();
         Self { receiver, sender }
     }
 
     /// Get sender handle
-    pub fn sender(&self) -> Sender<Message> {
+    pub fn sender(&self) -> mpsc::UnboundedSender<Message> {
         self.sender.clone()
     }
 
     /// Try to receive a message (non-blocking)
-    pub fn try_receive(&self) -> Option<Message> {
+    pub fn try_receive(&mut self) -> Option<Message> {
         self.receiver.try_recv().ok()
     }
 
-    /// Receive a message (blocking)
-    pub fn receive(&self) -> Option<Message> {
-        self.receiver.recv().ok()
+    /// Receive a message (async, awaits until available)
+    pub async fn receive(&mut self) -> Option<Message> {
+        self.receiver.recv().await
     }
 
     /// Send a message to this mailbox

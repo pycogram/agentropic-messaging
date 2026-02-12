@@ -21,6 +21,12 @@ impl Default for MessageId {
     }
 }
 
+impl std::fmt::Display for MessageId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Agent message
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
@@ -92,5 +98,15 @@ impl Message {
     /// Get timestamp
     pub fn timestamp(&self) -> SystemTime {
         self.timestamp
+    }
+
+    pub fn with_conversation_id(mut self, id: String) -> Self {
+        self.conversation_id = Some(id);
+        self
+    }
+
+    pub fn with_reply_to(mut self, id: MessageId) -> Self {
+        self.in_reply_to = Some(id);
+        self
     }
 }

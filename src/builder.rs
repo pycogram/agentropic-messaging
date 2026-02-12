@@ -62,13 +62,20 @@ impl MessageBuilder {
     }
 
     /// Build the message
-    pub fn build(self) -> Message {
-        Message::new(
-            self.sender.expect("sender required"),
-            self.receiver.expect("receiver required"),
-            self.performative.expect("performative required"),
-            self.content.expect("content required"),
-        )
+    pub fn build(self) -> Result<Message, crate::MessagingError> {
+        let mut msg = Message::new(
+            self.sender.ok_or(crate::MessagingError::Other("sender required".into()))?,
+            self.receiver.ok_or(crate::MessagingError::Other("receiver required".into()))?,
+            self.performative.ok_or(crate::MessagingError::Other("performative required".into()))?,
+            self.content.ok_or(crate::MessagingError::Other("content required".into()))?,
+        );
+        if let Some(cid) = self.conversation_id {
+            msg = msg.with_conversation_id(cid);
+        }
+        if let Some(reply) = self.in_reply_to {
+            msg = msg.with_reply_to(reply);
+        }
+        Ok(msg)
     }
 }
 
@@ -77,3 +84,5 @@ impl Default for MessageBuilder {
         Self::new()
     }
 }
+
+

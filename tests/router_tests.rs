@@ -1,17 +1,26 @@
 use agentropic_messaging::prelude::*;
 
-#[test]
-fn router_register_and_send() {
+#[tokio::test]
+async fn router_register_and_send() {
     let router = Router::new();
-    let sender = AgentId::new();
-    let receiver = AgentId::new();
+    let sender_id = AgentId::new();
+    let receiver_id = AgentId::new();
 
-    let mailbox = router.create_mailbox();
-    router.register(receiver, mailbox.clone()).unwrap();
+    let mut receiver = router.register(receiver_id).unwrap();
 
-    let msg = Message::new(sender, receiver, Performative::Inform, "test");
+    let msg = Message::new(sender_id, receiver_id, Performative::Inform, "test");
     router.send(msg).unwrap();
 
-    let received = mailbox.try_receive().unwrap();
+    let received = receiver.recv().await.unwrap();
     assert_eq!(received.content(), "test");
+}
+
+#[tokio::test]
+async fn router_send_to_unregistered_fails() {
+    let router = Router::new();
+    let sender_id = AgentId::new();
+    let receiver_id = AgentId::new();
+
+    let msg = Message::new(sender_id, receiver_id, Performative::Inform, "test");
+    assert!(router.send(msg).is_err());
 }
